@@ -65,13 +65,12 @@ def main():
     print("   Default admin: admin / admin")
     print("   Default normal user: user1 / user123")
 
-    # --- Save credentials for app reuse (optional) ---
+    
     try:
         p = _config_path()
         data = {"uri": uri, "user": user, "password": pwd}
         with open(p, "w", encoding="utf-8") as f:
             json.dump(data, f)
-        # Best-effort to restrict perms (unix); on Windows, it’s per-user AppData anyway
         if os.name != "nt":
             os.chmod(p, 0o600)
         print(f"   Saved credentials to: {p}")

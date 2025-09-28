@@ -101,8 +101,8 @@ def lo_save_file(path: str) -> int:
         with open(target_path, "wb") as out:
             out.write(data)
 
-        # store only URL (relative path) in DB; no binary data
-        # Using a repo-relative URL keeps existing relationships working unchanged.
+        # store only URL (relative path) in DB
+        
         url = f"files/{target_name}"
         s.run("""
             CREATE (b:Blob {oid:$oid, url:$url})
@@ -257,7 +257,7 @@ def doctor_view():
                 patients
             ORDER BY doctor_personnumer
         """)
-        # emulate old tabular shape by expanding rows
+       
         out = []
         for r in rs:
             d_id   = r["doctor_personnumer"]

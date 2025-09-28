@@ -80,7 +80,7 @@ class MainInterface:
 
 
     # utilities 
-    # keep HScrollFrame class from earlier in your file
+ 
 
     def _make_page(self, title: str, width=1000, height=640):
         win = tk.Toplevel(self.root)
@@ -88,9 +88,9 @@ class MainInterface:
         win.geometry(f"{width}x{height}")
 
         # --- Scrollable header (top) ---
-        top_wrap = HScrollFrame(win, height=130)   # adjust height if you want more room
+        top_wrap = HScrollFrame(win, height=130)  
         top_wrap.pack(fill="x", padx=8, pady=6)
-        top = top_wrap.inner  # use this as the parent for your grid() controls
+        top = top_wrap.inner  
 
         # --- Results area with BOTH scrollbars ---
         mid = tk.Frame(win)
