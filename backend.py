@@ -192,16 +192,18 @@ def department_search(dept_id="", dept_name="", cli_id="", clinic_name=""):
         where.append("c.cli_id CONTAINS $cli_id"); params["cli_id"] = cli_id
     if clinic_name:
         where.append("c.cli_name CONTAINS $clinic_name"); params["clinic_name"] = clinic_name
-    clause = " WHERE " + " AND ".join(where) if where else ""
+    clause = "WHERE " + " AND ".join(where) if where else ""
     with get_conn() as s:
         rs = s.run(f"""
             MATCH (d:Department)
             OPTIONAL MATCH (d)-[:BELONGS_TO]->(c:Clinic)
+            WITH d, c
             {clause}
             RETURN d.dept_id AS dept_id, d.dept_name AS dept_name, c.cli_id AS cli_id, c.cli_name AS cli_name
             ORDER BY dept_id
         """, **params)
         return [(r["dept_id"], r["dept_name"], r["cli_id"], r["cli_name"]) for r in rs]
+
 
 def department_insert(dept_id: str, dept_name: str, cli_id: str | None):
     require_admin()
@@ -286,6 +288,7 @@ def doctor_search(doctor_name="", doctor_personnumer="", patient_name="", patien
             MATCH (d:Doctor)
             OPTIONAL MATCH (p:Patient)-[:ASSIGNED_TO]->(d)
             OPTIONAL MATCH (d)-[:WORKS_IN]->(dept:Department)
+            WITH d, p, dept
             {clause}
             RETURN DISTINCT
                 d.doctor_ID AS doctor_personnumer,
@@ -297,6 +300,7 @@ def doctor_search(doctor_name="", doctor_personnumer="", patient_name="", patien
         """, **params)
         return [(r["doctor_personnumer"], r["doctor_name"], r["dept_id"],
                  r["patient_personnumer"], r["patient_name"]) for r in rs]
+
 
 def doctor_insert(doctor_personnumer: str, doctor_name: str, dept_id: str | None):
     require_admin()
@@ -368,6 +372,7 @@ def patient_search(patient_name="", patient_personnumer="", doctor_name="", doct
         rs = s.run(f"""
             MATCH (pa:Patient)
             OPTIONAL MATCH (pa)-[:ASSIGNED_TO]->(d:Doctor)
+            WITH pa, d
             {clause}
             RETURN
                 pa.patient_ID AS patient_personnumer,
@@ -378,6 +383,7 @@ def patient_search(patient_name="", patient_personnumer="", doctor_name="", doct
         """, **params)
         return [(r["patient_personnumer"], r["patient_name"],
                  r["doctor_personnumer"], r["doctor_name"]) for r in rs]
+
 
 def patient_insert(patient_personnumer: str, patient_name: str, doctor_personnumer: str | None):
     require_admin()
@@ -468,6 +474,7 @@ def appointment_search(appoint_id="", year="", month="", day="",
             MATCH (a:Appointment)
             OPTIONAL MATCH (a)-[:PATIENT]->(p:Patient)
             OPTIONAL MATCH (a)-[:DOCTOR]->(d:Doctor)
+            WITH a, p, d
             {clause}
             RETURN a.appoint_id AS appoint_id,
                    a.appoint_year AS appoint_year,
@@ -483,6 +490,7 @@ def appointment_search(appoint_id="", year="", month="", day="",
         return [(r["appoint_id"], r["appoint_year"], r["appoint_month"], r["appoint_day"],
                  r["appoint_location"], r["patient_personnumer"], r["patient_name"],
                  r["doctor_personnumer"], r["doctor_name"]) for r in rs]
+
 
 def appointment_insert(appoint_id: str, year: str, month: str, day: str,
                        location: str, patient_personnumer: str | None, doctor_personnumer: str | None):
@@ -624,6 +632,7 @@ def observation_search(obser_id="", year="", month="", day="", appoint_id="",
             OPTIONAL MATCH (a)-[:PATIENT]->(p:Patient)
             OPTIONAL MATCH (a)-[:DOCTOR]->(d:Doctor)
             OPTIONAL MATCH (o)-[:FILE]->(b:Blob)
+            WITH o, a, p, d, b
             {clause}
             RETURN o.obser_id   AS obser_id,
                    o.obs_year   AS obs_year,
@@ -782,6 +791,7 @@ def diagnosis_search(diagn_id="", year="", month="", day="", obser_id="", appoin
             OPTIONAL MATCH (a)-[:PATIENT]->(p:Patient)
             OPTIONAL MATCH (a)-[:DOCTOR]->(d:Doctor)
             OPTIONAL MATCH (dg)-[:FILE]->(b:Blob)
+            WITH dg, o, a, p, d, b
             {clause}
             RETURN dg.diagn_id AS diagn_id, dg.diagn_year AS diagn_year, dg.diagn_month AS diagn_month, dg.diagn_day AS diagn_day,
                    o.obser_id AS obser_id, a.appoint_id AS appoint_id,
