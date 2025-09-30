@@ -4,7 +4,7 @@ from calendar import monthrange
 import base64
 import os
 from pathlib import Path
-
+import login_backend
 # -------------------- helpers --------------------
 
 def _to_int(x):
@@ -316,6 +316,14 @@ def doctor_insert(doctor_personnumer: str, doctor_name: str, dept_id: str | None
                 MERGE (d)-[:WORKS_IN]->(dept)
             """, id=doctor_personnumer, dept=dept_id)
 
+    # --- auto-create Admin login for the doctor (username/password = d<personnumer>)
+    try:
+        doc_user = f"d{doctor_personnumer}" 
+        login_backend.insert_user(doc_user, doc_user, person_id=doctor_personnumer, as_admin=True)
+    except Exception as _e:
+        # don't fail the insert if account creation fails
+        pass
+
 def doctor_update(doctor_personnumer: str,
                   new_dept_id: str | None = None,
                   new_doctor_name: str | None = None):
@@ -399,6 +407,13 @@ def patient_insert(patient_personnumer: str, patient_name: str, doctor_personnum
                 MERGE (p)-[:ASSIGNED_TO]->(d)
             """, pid=patient_personnumer, did=doctor_personnumer)
 
+    # ---  auto-create normal User login for the patient (username/password = personnumer)
+    try:
+        pat_user = f"p{patient_personnumer}"
+        login_backend.insert_user(pat_user, pat_user, person_id=patient_personnumer, as_admin=False)
+    except Exception as _e:
+        pass
+
 def patient_update(patient_personnumer: str,
                    new_doctor_personnumer: str | None = None,
                    new_patient_name: str | None = None):
@@ -424,6 +439,28 @@ def patient_delete(patient_personnumer: str):
     with get_conn() as s:
         s.run("MATCH (p:Patient {patient_ID:$pid}) DETACH DELETE p", pid=patient_personnumer)
 
+# -------------------- HELPERS for Messaging UI  --------------------
+
+def get_patients_for_doctor(doctor_id: str):
+    """Return list of (patient_ID, patient_name) for a given doctor."""
+    with get_conn() as s:
+        rs = s.run("""
+            MATCH (p:Patient)-[:ASSIGNED_TO]->(d:Doctor {doctor_ID:$did})
+            RETURN p.patient_ID AS pid, p.name AS pname
+            ORDER BY pname, pid
+        """, did=doctor_id)
+        return [(r["pid"], r["pname"]) for r in rs]
+
+def get_doctors_for_patient(patient_id: str):
+    """Return list of (doctor_ID, doctor_name) for a given patient."""
+    with get_conn() as s:
+        rs = s.run("""
+            MATCH (p:Patient {patient_ID:$pid})-[:ASSIGNED_TO]->(d:Doctor)
+            RETURN d.doctor_ID AS did, d.name AS dname
+            ORDER BY dname, did
+        """, pid=patient_id)
+        return [(r["did"], r["dname"]) for r in rs]
+    
 # -------------------- APPOINTMENT --------------------
 
 def appointment_view():

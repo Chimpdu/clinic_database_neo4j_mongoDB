@@ -1,6 +1,8 @@
 import tkinter as tk
-from tkinter import messagebox, filedialog,ttk
+from tkinter import messagebox, filedialog, ttk
 import backend
+import messaging_backend
+import login_backend
 
 # add scroll bar so the contents will not be pushed outside the screen
 class HScrollFrame(tk.Frame):
@@ -16,41 +18,27 @@ class HScrollFrame(tk.Frame):
         self.inner = tk.Frame(self.canvas)
         self.inner.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
         self.canvas.create_window((0, 0), window=self.inner, anchor="nw")
+
 import sv_ttk
 
-# class MainInterface:
-#     def __init__(self, role: str):
-#         self.role = role  # "super" or "normal"
-#         self.root = tk.Tk()
-#         self.root.title("Clinic")
-#         self.root.geometry("620x360")
-
-#         title = f"Clinic ({'Admin' if self.role=='super' else 'Viewer'})"
-#         tk.Label(self.root, text=title, font=("Georgia", 18, "bold")).pack(pady=12)
-
-#         btns = tk.Frame(self.root)
-#         btns.pack(pady=10)
-
-#         tk.Button(btns, text="Patients",      width=18, command=self.open_patients).grid(     row=0, column=0, padx=6, pady=6)
-#         tk.Button(btns, text="Doctors",       width=18, command=self.open_doctors).grid(      row=0, column=1, padx=6, pady=6)
-#         tk.Button(btns, text="Appointments",  width=18, command=self.open_appointments).grid( row=1, column=0, padx=6, pady=6)
-#         tk.Button(btns, text="Observations",  width=18, command=self.open_observations).grid( row=1, column=1, padx=6, pady=6)
-#         tk.Button(btns, text="Diagnoses",     width=18, command=self.open_diagnoses).grid(    row=2, column=0, padx=6, pady=6)
-#         tk.Button(btns, text="Clinics",       width=18, command=self.open_clinics).grid(      row=2, column=1, padx=6, pady=6)
-#         tk.Button(btns, text="Departments",   width=18, command=self.open_departments).grid(  row=3, column=0, padx=6, pady=6)
-#         # This is where the magic happens
-#         # sv_ttk.set_theme("dark")
-#         self.root.mainloop()
-
 class MainInterface:
-    def __init__(self, role: str):
+    def __init__(self, role: str, login_name: str):
         self.role = role  # "super" or "normal"
+        self.login_name = login_name
         self.root = tk.Tk()
         self.root.title("Clinic")
-        self.root.geometry("800x600")
+        self.root.geometry("900x680")
         self.root.config(bg="#f0f0f0")
 
-        title = f"Clinic ({'Admin' if self.role=='super' else 'Viewer'})"
+        # resolve person identity and user type
+        self.person_id = login_backend.get_account_person_id(self.login_name) or self.login_name
+        self.user_type = "admin_only"
+        if self.role == "super" and login_backend.is_doctor_person(self.person_id):
+            self.user_type = "doctor"
+        elif self.role == "normal" and login_backend.is_patient_person(self.person_id):
+            self.user_type = "patient"
+
+        title = f"Clinic ({'Admin' if self.role=='super' else 'Viewer'}) — {self.login_name}"
         tk.Label(self.root, text=title, font=("Georgia", 24, "bold"), bg="#f0f0f0", fg="#3498db").pack(pady=20)
 
         btns = tk.Frame(self.root, bg="#f0f0f0")
@@ -76,12 +64,16 @@ class MainInterface:
                 col_val = 0
                 row_val += 1
 
+        # Account and Messaging buttons
+        extra = tk.Frame(self.root, bg="#f0f0f0")
+        extra.pack(pady=6)
+        tk.Button(extra, text="Account", width=15, height=2, font=("Georgia", 14), bg="#ecf0f1", fg="#2ecc71", command=self.open_account_window).pack(side="left", padx=10)
+        if self.user_type in ("doctor", "patient"):
+            tk.Button(extra, text="Messaging", width=15, height=2, font=("Georgia", 14), bg="#ecf0f1", fg="#2ecc71", command=self.open_messaging).pack(side="left", padx=10)
+
         self.root.mainloop()
 
-
     # utilities 
- 
-
     def _make_page(self, title: str, width=1000, height=640):
         win = tk.Toplevel(self.root)
         win.title(title)
@@ -110,8 +102,6 @@ class MainInterface:
 
         return win, top, lb
 
-
-
     def _fill_with_headers(self, lb, headers, rows):
         # clear existing items
         lb.delete(0, tk.END)
@@ -134,7 +124,6 @@ class MainInterface:
         # make sure geometry updates now so the scrollregion matches new content
         lb.update_idletasks()
 
-
     def _add(self, fn, lb, refresh_fn, headers):
         try:
             fn() # perform insert/delete/update
@@ -142,6 +131,136 @@ class MainInterface:
             self._fill_with_headers(lb, headers, refresh_fn()) #re-query and reprint the data
         except Exception as e:
             messagebox.showerror("DB error", str(e))
+
+    # ------------------ Account (change username/password) ------------------
+    def open_account_window(self):
+        win = tk.Toplevel(self.root)
+        win.title("My Account")
+        win.geometry("400x220")
+
+        tk.Label(win, text=f"Logged in as: {self.login_name}", font=("Arial", 12, "bold")).pack(pady=10)
+
+        frm = tk.Frame(win)
+        frm.pack(pady=5, padx=10, fill="x")
+
+        new_name_var = tk.StringVar()
+        new_pwd_var  = tk.StringVar()
+
+        tk.Label(frm, text="New username").grid(row=0, column=0, sticky="e", padx=5, pady=6)
+        tk.Entry(frm, textvariable=new_name_var, width=28).grid(row=0, column=1, padx=5)
+
+        tk.Label(frm, text="New password").grid(row=1, column=0, sticky="e", padx=5, pady=6)
+        tk.Entry(frm, textvariable=new_pwd_var, show="*", width=28).grid(row=1, column=1, padx=5)
+
+        def do_save():
+            new_name = new_name_var.get().strip() or None
+            new_pwd  = new_pwd_var.get().strip() or None
+            if not new_name and not new_pwd:
+                messagebox.showinfo("Nothing to do", "Enter a new username or password.")
+                return
+            try:
+                login_backend.change_own_credentials(self.login_name, role=self.role, new_name=new_name, new_password=new_pwd)
+                if new_name:
+                    self.login_name = new_name
+                    messagebox.showinfo("Saved", "Credentials updated. Please remember your new username.")
+                    win.destroy()
+                else:
+                    messagebox.showinfo("Saved", "Password updated.")
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
+
+        tk.Button(win, text="Save", command=do_save, width=12, bg="#4CAF50", fg="#fff").pack(pady=12)
+
+    # ------------------ Messaging UI ------------------
+    def open_messaging(self):
+        win = tk.Toplevel(self.root)
+        win.title("Messaging")
+        win.geometry("800x600")
+
+        # Top: recipient selector
+        top = tk.Frame(win)
+        top.pack(fill="x", padx=8, pady=8)
+
+        tk.Label(top, text="Recipient:").pack(side="left")
+        recipients = messaging_backend.list_recipients_for_user(self.login_name, role=self.role)
+        recipient_var = tk.StringVar()
+        recipient_names = [f"{r['name']} ({r['id']})" for r in recipients]
+        recipient_by_display = {f"{r['name']} ({r['id']})": r['id'] for r in recipients}
+
+        cmb = ttk.Combobox(top, values=recipient_names, textvariable=recipient_var, width=40, state="readonly")
+        cmb.pack(side="left", padx=8)
+        if recipient_names:
+            cmb.current(0)
+
+        tk.Button(top, text="Refresh", command=lambda: refresh_msgs(), width=10).pack(side="left", padx=6)
+
+        # Middle: messages display
+        mid = tk.Frame(win, bd=1, relief="sunken")
+        mid.pack(fill="both", expand=True, padx=8, pady=6)
+
+        msg_list = tk.Listbox(mid, font=("Consolas", 10))
+        ysb = tk.Scrollbar(mid, orient="vertical", command=msg_list.yview)
+        msg_list.configure(yscrollcommand=ysb.set)
+        msg_list.pack(side="left", fill="both", expand=True)
+        ysb.pack(side="right", fill="y")
+
+        # Bottom: composer
+        bot = tk.Frame(win)
+        bot.pack(fill="x", padx=8, pady=8)
+
+        tk.Label(bot, text="Message:").grid(row=0, column=0, sticky="e")
+        msg_var = tk.StringVar()
+        tk.Entry(bot, textvariable=msg_var, width=60).grid(row=0, column=1, padx=6)
+
+        file_path_var = tk.StringVar()
+
+        def pick_file():
+            p = filedialog.askopenfilename(title="Attach image / file", filetypes=[("All", "*.*")])
+            if p:
+                file_path_var.set(p)
+
+        tk.Button(bot, text="Attach", command=pick_file, width=10).grid(row=0, column=2, padx=6)
+        tk.Label(bot, textvariable=file_path_var, fg="gray").grid(row=1, column=1, sticky="w", padx=6, pady=4)
+
+        def refresh_msgs():
+            msg_list.delete(0, tk.END)
+            if not recipient_var.get():
+                msg_list.insert(tk.END, "Pick a recipient.")
+                return
+            other_id = recipient_by_display[recipient_var.get()]
+            msgs = messaging_backend.get_conversation(self.login_name, role=self.role, other_person_id=other_id, limit=500)
+            if not msgs:
+                msg_list.insert(tk.END, "No messages yet.")
+                return
+            for m in msgs:
+                who = "You" if m["sender_id"] == self.person_id else m["sender_id"]
+                line = f"[{m['created_at']}] {who}:"
+                if m.get("text"):
+                    line += f" {m['text']}"
+                if m.get("file_url"):
+                    line += f" (file: {m['file_url']})"
+                msg_list.insert(tk.END, line)
+            msg_list.yview_moveto(1.0)
+
+        def do_send():
+            if not recipient_var.get():
+                messagebox.showerror("Error", "Pick a recipient.")
+                return
+            other_id = recipient_by_display[recipient_var.get()]
+            text = msg_var.get().strip()
+            file_path = (file_path_var.get().strip() or None)
+            try:
+                messaging_backend.send_message(self.login_name, role=self.role, to_person_id=other_id, text=text or None, file_path=file_path)
+                msg_var.set("")
+                file_path_var.set("")
+                refresh_msgs()
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
+
+        tk.Button(bot, text="Send", command=do_send, width=12, bg="#4CAF50", fg="#fff").grid(row=0, column=3, padx=6)
+
+        # initial load
+        refresh_msgs()
 
     # Patients
     def open_patients(self):

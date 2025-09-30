@@ -19,14 +19,14 @@ def do_login():
         messagebox.showinfo("Login Successful", f"Welcome, {username} (Admin)!")
         set_dsn("super")   # we changed the global variable so it is now in admin mode
         root.destroy()
-        MainInterface("super")
+        MainInterface(role="super", login_name=username)
         return
 
     if login_backend.check_user(username, password):
         messagebox.showinfo("Login Successful", f"Welcome, {username}!")
         set_dsn("normal")  # read-only user connection
         root.destroy()
-        MainInterface("normal")
+        MainInterface(role="normal", login_name=username)
         return
 
     messagebox.showerror("Login Failed", "Invalid credentials. Please try again.")
@@ -65,15 +65,13 @@ def open_register():
             messagebox.showerror("Error", "Passwords do not match.")
             return
         try:
-            login_backend.insert_user(name, p1)
+            # keep person_id=name for stand-alone registered users
+            login_backend.insert_user(name, p1, person_id=name, as_admin=False)
             messagebox.showinfo("OK", "Registered! You can log in now.")
             top.destroy()
         except Exception as e:
             # Likely duplicate name (unique constraint) or DB error
             messagebox.showerror("DB error", str(e))
-
-    # Create register button
-    tk.Button(top, text="Register", command=do_register, font=("Arial", 12), width=10).grid(row=3, column=0, columnspan=2, padx=5, pady=10)
 
 # --- login window ---
 root = tk.Tk()
@@ -92,7 +90,6 @@ entry_username.grid(row=0, column=1, padx=5, pady=5)
 tk.Label(root, text="Password:", font=("Arial", 12)).grid(row=1, column=0, padx=5, pady=5)
 entry_password = tk.Entry(root, show="*", font=("Arial", 12), width=25)
 entry_password.grid(row=1, column=1, padx=5, pady=5)
-
 
 # Create login and register buttons
 btns = tk.Frame(root)
