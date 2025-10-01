@@ -44,34 +44,94 @@ class MainInterface:
         btns = tk.Frame(self.root, bg="#f0f0f0")
         btns.pack(pady=20)
 
-        buttons = [
-            {"text": "Patients", "command": self.open_patients},
-            {"text": "Doctors", "command": self.open_doctors},
-            {"text": "Appointments", "command": self.open_appointments},
-            {"text": "Observations", "command": self.open_observations},
-            {"text": "Diagnoses", "command": self.open_diagnoses},
-            {"text": "Clinics", "command": self.open_clinics},
-            {"text": "Departments", "command": self.open_departments},
-        ]
+        # Modified buttons based on user type
+        if self.user_type == "patient":
+            buttons = [
+                {"text": "Messaging", "command": self.open_messaging}
+            ]
+        else:
+            buttons = [
+                {"text": "Patients", "command": self.open_patients},
+                {"text": "Doctors", "command": self.open_doctors},
+                {"text": "Appointments", "command": self.open_appointments},
+                {"text": "Observations", "command": self.open_observations},
+                {"text": "Diagnoses", "command": self.open_diagnoses},
+                {"text": "Clinics", "command": self.open_clinics},
+                {"text": "Departments", "command": self.open_departments},
+            ]
 
         row_val = 0
         col_val = 0
 
         for button in buttons:
-            tk.Button(btns, text=button["text"], width=15, height=2, font=("Georgia", 14), bg="#ecf0f1", fg="#2ecc71", command=button["command"]).grid(row=row_val, column=col_val, padx=10, pady=10)
+            tk.Button(btns, text=button["text"], width=15, height=2, 
+                     font=("Georgia", 14), bg="#ecf0f1", fg="#2ecc71", 
+                     command=button["command"]).grid(row=row_val, column=col_val, padx=10, pady=10)
             col_val += 1
             if col_val > 3:
                 col_val = 0
                 row_val += 1
 
-        # Account and Messaging buttons
+        # Account settings button (available to all users)
         extra = tk.Frame(self.root, bg="#f0f0f0")
         extra.pack(pady=6)
-        tk.Button(extra, text="Account", width=15, height=2, font=("Georgia", 14), bg="#ecf0f1", fg="#2ecc71", command=self.open_account_window).pack(side="left", padx=10)
-        if self.user_type in ("doctor", "patient"):
-            tk.Button(extra, text="Messaging", width=15, height=2, font=("Georgia", 14), bg="#ecf0f1", fg="#2ecc71", command=self.open_messaging).pack(side="left", padx=10)
+        tk.Button(extra, text="Account", width=15, height=2, 
+                 font=("Georgia", 14), bg="#ecf0f1", fg="#2ecc71", 
+                 command=self.open_account_window).pack(side="left", padx=10)
 
         self.root.mainloop()
+
+# class MainInterface:
+#     def __init__(self, role: str, login_name: str):
+#         self.role = role  # "super" or "normal" or "pat"
+#         self.login_name = login_name
+#         self.root = tk.Tk()
+#         self.root.title("Clinic")
+#         self.root.geometry("900x680")
+#         self.root.config(bg="#f0f0f0")
+
+#         # resolve person identity and user type
+#         self.person_id = login_backend.get_account_person_id(self.login_name) or self.login_name
+#         self.user_type = "admin_only"
+#         if self.role == "super" and login_backend.is_doctor_person(self.person_id):
+#             self.user_type = "doctor"
+#         elif self.role == "pat" and login_backend.is_patient_person(self.person_id):
+#             self.user_type = "patient"
+
+#         title = f"Clinic ({'Admin' if self.role=='super' else 'Viewer'}) — {self.login_name}"
+#         tk.Label(self.root, text=title, font=("Georgia", 24, "bold"), bg="#f0f0f0", fg="#3498db").pack(pady=20)
+
+#         btns = tk.Frame(self.root, bg="#f0f0f0")
+#         btns.pack(pady=20)
+
+#         buttons = [
+#             {"text": "Patients", "command": self.open_patients},
+#             {"text": "Doctors", "command": self.open_doctors},
+#             {"text": "Appointments", "command": self.open_appointments},
+#             {"text": "Observations", "command": self.open_observations},
+#             {"text": "Diagnoses", "command": self.open_diagnoses},
+#             {"text": "Clinics", "command": self.open_clinics},
+#             {"text": "Departments", "command": self.open_departments},
+#         ]
+
+#         row_val = 0
+#         col_val = 0
+
+#         for button in buttons:
+#             tk.Button(btns, text=button["text"], width=15, height=2, font=("Georgia", 14), bg="#ecf0f1", fg="#2ecc71", command=button["command"]).grid(row=row_val, column=col_val, padx=10, pady=10)
+#             col_val += 1
+#             if col_val > 3:
+#                 col_val = 0
+#                 row_val += 1
+
+#         # Account and Messaging buttons
+#         extra = tk.Frame(self.root, bg="#f0f0f0")
+#         extra.pack(pady=6)
+#         tk.Button(extra, text="Account", width=15, height=2, font=("Georgia", 14), bg="#ecf0f1", fg="#2ecc71", command=self.open_account_window).pack(side="left", padx=10)
+#         if self.user_type in ("doctor", "patient"):
+#             tk.Button(extra, text="Messaging", width=15, height=2, font=("Georgia", 14), bg="#ecf0f1", fg="#2ecc71", command=self.open_messaging).pack(side="left", padx=10)
+
+#         self.root.mainloop()
 
     # utilities 
     def _make_page(self, title: str, width=1000, height=640):
