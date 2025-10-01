@@ -16,7 +16,7 @@ Every time admin user inserts a doctor, the system would auto create a admin acc
 
 ### username/password: "d" + {doctor's personnumer}
 
-Similarly, a normal user account will be auto created for a patient when a patient is inserted.
+Similarly, a normal user account will be auto created for a patient when a patient is inserted. In addition, patients are further restricted that they cannot view the data stored in the database, but can view/send messages from/to their doctors and manage their account settings.
 ### username/password: "p" + {patient's personnumer}
 
 ## Change account settings
