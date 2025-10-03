@@ -58,6 +58,7 @@ class MainInterface:
                 {"text": "Diagnoses", "command": self.open_diagnoses},
                 {"text": "Clinics", "command": self.open_clinics},
                 {"text": "Departments", "command": self.open_departments},
+                {"text": "Messaging", "command": self.open_messaging},
             ]
 
         row_val = 0
